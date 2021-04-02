@@ -1,5 +1,4 @@
 import json
-
 import numpy as np
 from numpy.random import randn
 from encoder import NumpyEncoder
@@ -93,13 +92,13 @@ class RNN:
                'bh': self.bh, 'by': self.by}
 
     dumped = json.dumps(WB_dict, cls=NumpyEncoder)
-    with open("model.json", "w") as fp:
+    with open("model_rnn.json", "w") as fp:
       json.dump(dumped, fp)
 
     fp.close()
 
   def loadModel(self):
-    with open('model.json', 'r') as f:
+    with open('model_rnn.json', 'r') as f:
       jsonData = json.load(f)
     WB_dict = json.loads(jsonData)
     f.close()

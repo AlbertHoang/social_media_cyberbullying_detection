@@ -100,7 +100,7 @@ def rnnTrain(rnn, numLoop):
 
 def initiateLSTM():
   lstm = LSTM(vocab_size, 2)
-  lstmTrain(lstm,400)
+  lstmTrain(lstm,200)
 
 def lstmProcessData(lstm, data, backprop=True):
   '''
@@ -130,9 +130,10 @@ def lstmProcessData(lstm, data, backprop=True):
       # Build dL/dy
       d_L_d_y = probs
       d_L_d_y[target] -= 1
+      d_L_d_c = 0.05
 
       # Backward
-      lstm.backprop(d_L_d_y)
+      lstm.backprop(d_L_d_y, d_L_d_c)
 
   return loss / len(data), num_correct / len(data)
 
@@ -154,5 +155,6 @@ def lstmTrain(lstm, numLoop):
       print('Test:\tLoss %.3f | Accuracy: %.3f' % (test_loss, test_acc))
 
   # Save model
+  lstm.saveModel()
 
 initiateLSTM()
