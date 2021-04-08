@@ -5,6 +5,7 @@ from data import train_data, test_data
 import random
 from encoder import NumpyEncoder
 import json
+from feature_extraction import createVocabulary, createInput3D
 
 
 class LSTM:
@@ -299,32 +300,6 @@ class LSTM:
     f.close()
     return WB_dict
 
-# Create the vocabulary.
-vocab = list(set([w for text in train_data.keys() for w in text.split(' ')]))
-vocab_size = len(vocab)
-print('%d unique words found' % vocab_size)
-print(vocab)
-
-# Assign indices to each word.
-word_to_idx = {w: i for i, w in enumerate(vocab)}
-idx_to_word = {i: w for i, w in enumerate(vocab)}
-
-def createInputs(text):
-  '''
-  Returns 3d arrays of one-hot vectors representing the words in the input text string and order.
-  - text is a string
-  - Each one-hot vector has shape (vocab_size, 1)
-  output: (vocab_size, 1, vocab_order)
-  '''
-  wordCount = len(text.split(' '))
-  inputs = np.zeros((vocab_size, 1, wordCount))
-  order = 0
-  for w in text.split(' '):
-    v = np.zeros((vocab_size, 1))
-    v[word_to_idx[w]] = 1
-    inputs[word_to_idx[w],0,order] = 1
-    order+=1
-  return inputs
 
 def initiateLSTM():
   lstm = LSTM(vocab_size, 2)
@@ -343,7 +318,7 @@ def lstmProcessData(lstm, data, backprop=True):
   num_correct = 0
 
   for x, y in items:
-    inputs = createInputs(x)
+    inputs = createInput3D(x)
     target = int(y)
 
     _, n_a = lstm.Wy.shape

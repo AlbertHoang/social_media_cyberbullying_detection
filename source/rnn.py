@@ -2,12 +2,15 @@ import json
 import numpy as np
 from numpy.random import randn
 from encoder import NumpyEncoder
+from feature_extraction import createVocabulary, createInputList, sanitizer
+import random
+from maths import softmax
 
 
 class RNN:
   # A many-to-one Vanilla Recurrent Neural Network.
 
-  def __init__(self, input_size, output_size, hidden_size=18):
+  def __init__(self, input_size, output_size, hidden_size=64):
     # Weights
     self.Whh = randn(hidden_size, hidden_size) / 1000
     self.Wxh = randn(hidden_size, input_size) / 1000
@@ -87,20 +90,127 @@ class RNN:
     self.bh -= learn_rate * d_bh
     self.by -= learn_rate * d_by
 
-  def saveModel(self):
+  def saveModel(self, train_data_size, numLoop):
     WB_dict = {'Wxh': self.Wxh, 'Whh': self.Whh, 'Why': self.Why,
                'bh': self.bh, 'by': self.by}
 
     dumped = json.dumps(WB_dict, cls=NumpyEncoder)
-    with open("model_rnn.json", "w") as fp:
+    with open("model_rnn_"+str(train_data_size)+"_"+str(numLoop)+".json", "w") as fp:
       json.dump(dumped, fp)
 
     fp.close()
 
   def loadModel(self):
-    with open('model_rnn.json', 'r') as f:
+    with open('model_rnn_300_400.json.json', 'r') as f:
       jsonData = json.load(f)
     WB_dict = json.loads(jsonData)
     f.close()
     return WB_dict
+# End class RNN
+
+def rnnProcessData(rnn, data, backprop=True):
+  '''
+  Returns the RNN's loss and accuracy for the given data.
+  - data is a dictionary mapping text to True or False.
+  - backprop determines if the backward phase should be run.
+  '''
+  items = list(data.items())
+  random.shuffle(items)
+
+  loss = 0
+  num_correct = 0
+
+  for x, y in items:
+    inputs = createInputList(x, vocab_size, word_to_idx)
+    target = list(set(y))
+
+    # Forward
+    out, _ = rnn.forward(inputs)
+    probs = softmax(out)
+
+    # Calculate loss by average of log of probability of all correct class
+    avg_loss = np.average(np.log(probs[target]))
+    loss -= avg_loss
+
+    # Calculate accuracy
+    probs_replica = probs.copy()
+    preds = []
+    for i in target:
+      pred = np.argmax(probs_replica)
+      preds.append(pred)
+      probs_replica[pred] = 0
+
+    target.sort()
+    preds.sort()
+    if (target == preds):
+      num_correct += 1
+
+    if backprop:
+      # Build dL/dy
+      d_L_d_y = probs
+      d_L_d_y[target] -= 1 / len(target) # the main reason
+
+      # Backward
+      rnn.backprop(d_L_d_y)
+
+  return loss / len(data), num_correct / len(data)
+
+
+def rnnTrain(rnn, train_data, numLoop):
+  '''
+  Train data and save model after training
+  :param train_data:
+  :param rnn:
+  :param numLoop: number of training loop
+  :return:
+  '''
+  # Training loop
+  for epoch in range(numLoop):
+    train_loss, train_acc = rnnProcessData(rnn, train_data)
+
+    if epoch % 100 == 99:
+      print('--- Epoch %d' % (epoch + 1))
+      print('Train:\tLoss %.3f | Accuracy: %.3f' % (train_loss, train_acc))
+
+      # test_loss, test_acc = rnnProcessData(rnn, test_data, backprop=False)
+      # print('Test:\tLoss %.3f | Accuracy: %.3f' % (test_loss, test_acc))
+
+  # Save model
+  rnn.saveModel(len(train_data), numLoop)
+
+
+def get_train_data():
+  path = '/Users/nguyenphuc/Documents/Python/SocialMediaBullyDetect/social_media_cyberbullying_detection/RNN_source/social_media_cyberbullying_detection/datasets/MMHS/'
+  fn = 'train_data_text_labels.json'
+
+  f = open(path + fn, 'r')
+  data = json.load(f)  # size is 1002
+  f.close()
+  return data
+
+def get_val_data():
+  path = '/Users/nguyenphuc/Documents/Python/SocialMediaBullyDetect/social_media_cyberbullying_detection/RNN_source/social_media_cyberbullying_detection/datasets/MMHS/'
+  fn = 'val_data_text_labels.json'
+
+  f = open(path + fn, 'r')
+  data = json.load(f)  # size is 1002
+  f.close()
+  return data
+
+def get_test_data():
+  path = '/Users/nguyenphuc/Documents/Python/SocialMediaBullyDetect/social_media_cyberbullying_detection/RNN_source/social_media_cyberbullying_detection/datasets/MMHS/'
+  fn = 'test_data_text_labels.json'
+
+  f = open(path + fn, 'r')
+  data = json.load(f)  # size is 1002
+  f.close()
+  return data
+
+
+train_data = get_train_data()
+# test_data = get_test_data()
+vocab_size, word_to_idx = createVocabulary(train_data)
+
+rnn = RNN(vocab_size, 6)
+rnnTrain(rnn, train_data, 100)
 

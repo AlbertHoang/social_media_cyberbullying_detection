@@ -8,3 +8,4 @@ def sigmoid(x):
 def softmax(xs):
   # Applies the Softmax Function to the input array.
   return np.exp(xs) / sum(np.exp(xs))
+
