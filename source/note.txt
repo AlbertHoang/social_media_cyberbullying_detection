@@ -1,0 +1,4 @@
+The name of the model after train: model_rnn_300_400
+	rnn is the type
+	300 is number of train data size
+	400 is number of loop 
